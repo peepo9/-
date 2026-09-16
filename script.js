@@ -4,7 +4,7 @@
    ตรวจจับหน้าปัจจุบันจาก element ที่มีอยู่ในหน้านั้นๆ
    ========================================================= */
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZYCnI4r30bpVfItYJziVbHyOY8CVUVYeEFFnvx2b4pid2-Ba2ANmuOLScHIj5EIUB/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwwuZ7KpdNz4k1d5BeItruPVe_S37ldWBfk11AU9f3HX3xHzMMXBfvyUJI7sbLfSFVB/exec';
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQVX1ZbDi1j3LMCGVPGhNWbf_TXyO0tOHsy56RZJe07-rMc0vXgfzdQANELMwxyW1ygAKSFxCm80wtV/pub?gid=0&single=true&output=csv';
 const PRODUCTS_JSON_URL = 'products.json';
 
