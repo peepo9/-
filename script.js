@@ -164,29 +164,32 @@ function initOrderPage() {
 }
 
 function submitOrder(form) {
-  const customerName = document.getElementById('customerName').value;
-  const contact = document.getElementById('contact').value;
-  const items = document.getElementById('items').value;
-  const total = document.getElementById('total').value;
-  const note = document.getElementById('note').value;
+  const customerNameEl = document.getElementById('customerName');
+  const contactEl = document.getElementById('contact');
+  const itemsEl = document.getElementById('items');
+  const totalEl = document.getElementById('total');
+  const noteEl = document.getElementById('note');
 
-  const payload = {
-    customerName,
-    contact,
-    items,
-    total,
-    note
-  };
+  // ใช้ URLSearchParams ป้องกันปัญหา CORS บล็อก request ไปยัง Google Apps Script
+  const formData = new URLSearchParams();
+  formData.append('customerName', customerNameEl ? customerNameEl.value : '');
+  formData.append('contact', contactEl ? contactEl.value : '');
+  formData.append('items', itemsEl ? itemsEl.value : '');
+  formData.append('total', totalEl ? totalEl.value : '');
+  formData.append('note', noteEl ? noteEl.value : '');
 
   fetch(APPS_SCRIPT_URL, {
     method: 'POST',
-    body: JSON.stringify(payload)
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+    },
+    body: formData.toString()
   })
     .then(() => {
       window.location.href = 'thankyou.html';
     })
     .catch((error) => {
-      console.error(error);
+      console.error('Order Error:', error);
       alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     });
 }
