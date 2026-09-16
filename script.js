@@ -177,7 +177,7 @@ function submitOrder(form) {
   formData.append('total', totalEl ? totalEl.value : '');
   formData.append('note', noteEl ? noteEl.value : '');
 
-  fetch('https://script.google.com/macros/s/AKfycbwwuZ7KpdNz4k1d5BeItruPVe_S37ldWBfk11AU9f3HX3xHzMMXBfvyUJI7sbLfSFVB/exec, {
+  fetch('https://script.google.com/macros/s/AKfycbwwuZ7KpdNz4k1d5BeItruPVe_S37ldWBfk11AU9f3HX3xHzMMXBfvyUJI7sbLfSFVB/exec'), {
     method: 'POST',
     mode: 'no-cors', // แก้ไขจุดนี้: ป้องกันเบราว์เซอร์บล็อกเนื่องจาก CORS
     headers: {
