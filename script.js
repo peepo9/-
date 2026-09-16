@@ -4,7 +4,7 @@
    ตรวจจับหน้าปัจจุบันจาก element ที่มีอยู่ในหน้านั้นๆ
    ========================================================= */
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzwczKCVwguhI7UUknXd8QvpehczZLSnvt1ChFlcFe0IDNq_Ml7uqyCV4-SZoyaxHaW/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZYCnI4r30bpVfItYJziVbHyOY8CVUVYeEFFnvx2b4pid2-Ba2ANmuOLScHIj5EIUB/exec';
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQVX1ZbDi1j3LMCGVPGhNWbf_TXyO0tOHsy56RZJe07-rMc0vXgfzdQANELMwxyW1ygAKSFxCm80wtV/pub?gid=0&single=true&output=csv';
 const PRODUCTS_JSON_URL = 'products.json';
 
@@ -170,7 +170,6 @@ function submitOrder(form) {
   const totalEl = document.getElementById('total');
   const noteEl = document.getElementById('note');
 
-  // ใช้ URLSearchParams ป้องกันปัญหา CORS บล็อก request ไปยัง Google Apps Script
   const formData = new URLSearchParams();
   formData.append('customerName', customerNameEl ? customerNameEl.value : '');
   formData.append('contact', contactEl ? contactEl.value : '');
@@ -180,8 +179,9 @@ function submitOrder(form) {
 
   fetch(APPS_SCRIPT_URL, {
     method: 'POST',
+    mode: 'no-cors', // แก้ไขจุดนี้: ป้องกันเบราว์เซอร์บล็อกเนื่องจาก CORS
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+      'Content-Type': 'application/x-www-form-urlencoded'
     },
     body: formData.toString()
   })
