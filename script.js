@@ -1,292 +1,178 @@
-/* =========================================================
-   [BRAND] — script.js
-   ใช้ร่วมกันทุกหน้า: product.html, order.html, admin.html
-   ตรวจจับหน้าปัจจุบันจาก element ที่มีอยู่ในหน้านั้นๆ
-   ========================================================= */
+// ==========================================
+// CONFIGURATION: ลิงก์เชื่อมต่อ Google Services
+// ==========================================
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzT410c5UV0QPNwMA3-elaISgyOm4IBr1IBf3ht4wwW7ys1jdRcPUEw7zHde6C_7R9/exec";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQVX1ZbDi1j3LMCGVPGhNWbf_TXyO0tOHsy56RZJe07-rMc0vXgfzdQANELMwxyW1ygAKSFxCm80wtV/pub?gid=0&single=true&output=csv";
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwwuZ7KpdNz4k1d5BeItruPVe_S37ldWBfk11AU9f3HX3xHzMMXBfvyUJI7sbLfSFVB/exec';
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQVX1ZbDi1j3LMCGVPGhNWbf_TXyO0tOHsy56RZJe07-rMc0vXgfzdQANELMwxyW1ygAKSFxCm80wtV/pub?gid=0&single=true&output=csv';
-const PRODUCTS_JSON_URL = 'products.json';
-
-const MOOD_LABELS = {
-  all: 'ทั้งหมด',
-  refresh: 'Refresh',
-  detox: 'Detox',
-  glow: 'Glow',
-  energy: 'Energy'
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('product-list')) {
+document.addEventListener("DOMContentLoaded", () => {
+  // 1. ตรวจสอบการรันในหน้า product.html
+  if (document.getElementById("product-list")) {
     initProductPage();
   }
-  if (document.getElementById('orderForm')) {
+
+  // 2. ตรวจสอบการรันในหน้า order.html
+  if (document.getElementById("orderForm")) {
     initOrderPage();
   }
-  if (document.querySelector('#ordersTable tbody')) {
+
+  // 3. ตรวจสอบการรันในหน้า admin.html
+  if (document.getElementById("ordersTable")) {
     initAdminPage();
   }
 });
 
-/* =========================================================
-   1. product.html — แสดงสินค้า + ตัวกรอง mood
-   ========================================================= */
+// ==========================================
+// 1. ฟังก์ชันสำหรับหน้า PRODUCT (product.html)
+// ==========================================
 function initProductPage() {
-  const listEl = document.getElementById('product-list');
-  const filterBarEl = document.getElementById('filter-bar');
-
-  fetch(PRODUCTS_JSON_URL)
-    .then((res) => res.json())
+  fetch("products.json")
+    .then((response) => response.json())
     .then((products) => {
       const urlParams = new URLSearchParams(window.location.search);
-      const initialMood = urlParams.get('mood') || 'all';
+      const moodFilter = urlParams.get("mood");
 
-      renderFilterBar(filterBarEl, products, initialMood, (mood) => {
-        renderProductList(listEl, products, mood);
-      });
-
-      renderProductList(listEl, products, initialMood);
+      renderProducts(products, moodFilter);
+      setupFilterButtons(products);
     })
-    .catch((error) => {
-      console.error(error);
-      listEl.innerHTML = '<p class="text-muted">ไม่สามารถโหลดข้อมูลสินค้าได้ กรุณาลองใหม่อีกครั้ง</p>';
-    });
+    .catch((error) => console.error("Error loading products:", error));
 }
 
-function renderFilterBar(filterBarEl, products, activeMood, onFilterChange) {
-  if (!filterBarEl) return;
+function renderProducts(products, filter = null) {
+  const container = document.getElementById("product-list");
+  if (!container) return;
 
-  const moods = ['all', ...Array.from(new Set(products.map((p) => p.mood)))];
+  container.innerHTML = "";
 
-  filterBarEl.innerHTML = moods
-    .map((mood) => {
-      const label = MOOD_LABELS[mood] || mood;
-      const isActive = mood === activeMood;
-      return `
-        <button
-          type="button"
-          class="btn ${isActive ? 'btn--primary' : 'btn--secondary'} btn--sm filter-btn"
-          data-mood="${mood}"
-        >
-          ${label}
-        </button>
-      `;
-    })
-    .join('');
-
-  filterBarEl.querySelectorAll('.filter-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const mood = btn.getAttribute('data-mood');
-
-      filterBarEl.querySelectorAll('.filter-btn').forEach((b) => {
-        b.classList.remove('btn--primary');
-        b.classList.add('btn--secondary');
-      });
-      btn.classList.remove('btn--secondary');
-      btn.classList.add('btn--primary');
-
-      const url = new URL(window.location.href);
-      if (mood === 'all') {
-        url.searchParams.delete('mood');
-      } else {
-        url.searchParams.set('mood', mood);
-      }
-      window.history.replaceState({}, '', url);
-
-      onFilterChange(mood);
-    });
-  });
-}
-
-function renderProductList(listEl, products, mood) {
-  if (!listEl) return;
-
-  const filtered = mood && mood !== 'all'
-    ? products.filter((p) => p.mood === mood)
+  const filtered = filter && filter !== "all" 
+    ? products.filter((p) => p.mood.toLowerCase() === filter.toLowerCase())
     : products;
 
-  if (filtered.length === 0) {
-    listEl.innerHTML = '<p class="text-muted">ไม่พบสินค้าในหมวดนี้</p>';
-    return;
-  }
-
-  listEl.innerHTML = filtered.map((product) => productCardTemplate(product)).join('');
-}
-
-function productCardTemplate(product) {
-  const orderUrl = `order.html?item=${encodeURIComponent(product.name + ' ' + product.size)}&price=${encodeURIComponent(product.price)}`;
-
-  return `
-    <article class="product-card">
-      <img class="product-card__image" src="${product.image}" alt="${product.name}" loading="lazy">
-      <div class="product-card__body">
-        <span class="mood-tag" data-mood="${product.mood}">
-          <span class="mood-dot" data-mood="${product.mood}"></span>
-          ${MOOD_LABELS[product.mood] || product.mood}
-        </span>
-        <h3 class="product-card__title">${product.name}</h3>
-        <p class="text-sm text-muted">${product.size}</p>
-        <div class="product-card__meta">
-          <div class="product-card__price">
-            ${product.price}<span> บาท</span>
-          </div>
-          <a class="btn btn--primary btn--sm" href="${orderUrl}">สั่งซื้อ</a>
-        </div>
-      </div>
-    </article>
-  `;
-}
-
-/* =========================================================
-   2. order.html — เติมฟอร์มจาก URL + ส่งคำสั่งซื้อ
-   ========================================================= */
-function initOrderPage() {
-  const form = document.getElementById('orderForm');
-  const itemsInput = document.getElementById('items');
-  const totalInput = document.getElementById('total');
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const item = urlParams.get('item');
-  const price = urlParams.get('price');
-
-  if (item && itemsInput) {
-    itemsInput.value = item;
-  }
-
-  if (price && totalInput) {
-    totalInput.value = price;
-  }
-
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    submitOrder(form);
+  filtered.forEach((product) => {
+    const card = document.createElement("div");
+    card.className = "product-card";
+    card.innerHTML = `
+      <img src="${product.image}" alt="${product.name}">
+      <h3>${product.name}</h3>
+      <p class="description">${product.description || ''}</p>
+      <p class="price">${product.price} บาท</p>
+      <a href="order.html?item=${encodeURIComponent(product.name)}&price=${product.price}" class="btn-buy">สั่งซื้อ</a>
+    `;
+    container.appendChild(card);
   });
 }
 
-function submitOrder(form) {
-  const customerNameEl = document.getElementById('customerName');
-  const contactEl = document.getElementById('contact');
-  const itemsEl = document.getElementById('items');
-  const totalEl = document.getElementById('total');
-  const noteEl = document.getElementById('note');
+function setupFilterButtons(products) {
+  const filterBar = document.getElementById("filter-bar");
+  if (!filterBar) return;
 
-  const formData = new URLSearchParams();
-  formData.append('customerName', customerNameEl ? customerNameEl.value : '');
-  formData.append('contact', contactEl ? contactEl.value : '');
-  formData.append('items', itemsEl ? itemsEl.value : '');
-  formData.append('total', totalEl ? totalEl.value : '');
-  formData.append('note', noteEl ? noteEl.value : '');
+  filterBar.addEventListener("click", (e) => {
+    if (e.target.tagName === "BUTTON") {
+      const mood = e.target.getAttribute("data-mood");
+      renderProducts(products, mood);
+    }
+  });
+}
 
-  fetch('https://script.google.com/macros/s/AKfycbwwuZ7KpdNz4k1d5BeItruPVe_S37ldWBfk11AU9f3HX3xHzMMXBfvyUJI7sbLfSFVB/exec'), {
-    method: 'POST',
-    mode: 'no-cors', // แก้ไขจุดนี้: ป้องกันเบราว์เซอร์บล็อกเนื่องจาก CORS
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: formData.toString()
+// ==========================================
+// 2. ฟังก์ชันสำหรับหน้า ORDER (order.html)
+// ==========================================
+function initOrderPage() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const itemParam = urlParams.get("item");
+  const priceParam = urlParams.get("price");
+
+  const itemsInput = document.getElementById("items");
+  const totalInput = document.getElementById("total");
+
+  if (itemParam && itemsInput) {
+    itemsInput.value = itemParam;
+  }
+  if (priceParam && totalInput) {
+    totalInput.value = priceParam;
+  }
+
+  const orderForm = document.getElementById("orderForm");
+  if (orderForm) {
+    orderForm.addEventListener("submit", handleOrderSubmit);
+  }
+}
+
+function handleOrderSubmit(e) {
+  e.preventDefault();
+
+  const submitButton = e.target.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+
+  const payload = {
+    customerName: document.getElementById("customerName") ? document.getElementById("customerName").value : "",
+    contact: document.getElementById("contact") ? document.getElementById("contact").value : "",
+    items: document.getElementById("items") ? document.getElementById("items").value : "",
+    total: document.getElementById("total") ? document.getElementById("total").value : "",
+    note: document.getElementById("note") ? document.getElementById("note").value : ""
+  };
+
+  // ส่งข้อมูลเข้า Apps Script โดยไม่ใช้ Headers เพื่อป้องกันปัญหา CORS
+  fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
   })
     .then(() => {
-      window.location.href = 'thankyou.html';
+      window.location.href = "thankyou.html";
     })
     .catch((error) => {
-      console.error('Order Error:', error);
-      alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+      console.error("Submission error:", error);
+      alert("เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง");
+      if (submitButton) submitButton.disabled = false;
     });
 }
 
-/* =========================================================
-   3. admin.html — ดึง CSV มาแสดงเป็นตาราง (ล่าสุดขึ้นก่อน)
-   ========================================================= */
+// ==========================================
+// 3. ฟังก์ชันสำหรับหน้า ADMIN (admin.html)
+// ==========================================
 function initAdminPage() {
-  const tbody = document.querySelector('#ordersTable tbody');
-
-  fetch(SHEET_CSV_URL)
-    .then((res) => res.text())
+  fetch(CSV_URL)
+    .then((response) => response.text())
     .then((csvText) => {
       const rows = parseCSV(csvText);
-      if (rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6">ยังไม่มีข้อมูลคำสั่งซื้อ</td></tr>';
-        return;
-      }
-
-      const dataRows = rows.slice(1).filter((row) => row.some((cell) => cell && cell.trim() !== ''));
-      const reversedRows = dataRows.slice().reverse();
-
-      tbody.innerHTML = reversedRows.map((row) => adminRowTemplate(row)).join('');
+      renderAdminTable(rows);
     })
-    .catch((error) => {
-      console.error(error);
-      tbody.innerHTML = '<tr><td colspan="6">ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง</td></tr>';
-    });
+    .catch((error) => console.error("Error loading CSV:", error));
 }
 
-function adminRowTemplate(row) {
-  const [timestamp = '', customerName = '', contact = '', items = '', total = '', note = ''] = row;
-
-  return `
-    <tr>
-      <td>${escapeHtml(timestamp)}</td>
-      <td>${escapeHtml(customerName)}</td>
-      <td>${escapeHtml(contact)}</td>
-      <td>${escapeHtml(items)}</td>
-      <td>${escapeHtml(total)}</td>
-      <td>${escapeHtml(note)}</td>
-    </tr>
-  `;
-}
-
-/**
- * Parse CSV text เป็น array ของ array (rows x columns)
- * รองรับฟิลด์ที่ครอบด้วย double quote, comma และ newline ภายในฟิลด์, และ "" สำหรับ escape quote
- */
-function parseCSV(csvText) {
-  const rows = [];
-  let row = [];
-  let field = '';
-  let inQuotes = false;
-
-  const text = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const nextChar = text[i + 1];
-
-    if (inQuotes) {
-      if (char === '"' && nextChar === '"') {
-        field += '"';
-        i++;
-      } else if (char === '"') {
-        inQuotes = false;
-      } else {
-        field += char;
-      }
-    } else {
-      if (char === '"') {
-        inQuotes = true;
-      } else if (char === ',') {
-        row.push(field);
-        field = '';
-      } else if (char === '\n') {
-        row.push(field);
-        rows.push(row);
-        row = [];
-        field = '';
-      } else {
-        field += char;
-      }
+function parseCSV(text) {
+  const lines = text.trim().split("\n");
+  return lines.map((line) => {
+    // แยกคอลัมน์จาก CSV รองรับข้อความที่มีเครื่องหมายคำพูด (Quotes)
+    const regex = /(?:\"([^\"]*)\"|([^,]+))/g;
+    const row = [];
+    let match;
+    while ((match = regex.exec(line)) !== null) {
+      row.push(match[1] || match[2] || "");
     }
-  }
-
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-
-  return rows;
+    return row;
+  });
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value ?? '';
-  return div.innerHTML;
+function renderAdminTable(rows) {
+  const tbody = document.querySelector("#ordersTable tbody");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  // ข้ามข้อมูลแถวแรก (Header) แล้วแสดงรายการล่าสุดขึ้นก่อน
+  const dataRows = rows.slice(1).reverse();
+
+  dataRows.forEach((row) => {
+    if (row.length < 2) return; // ข้ามแถวที่ไม่มีข้อมูล
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row[0] || ""}</td>
+      <td>${row[1] || ""}</td>
+      <td>${row[2] || ""}</td>
+      <td>${row[3] || ""}</td>
+      <td>${row[4] || ""}</td>
+      <td>${row[5] || ""}</td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
